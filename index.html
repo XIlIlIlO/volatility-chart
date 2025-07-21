@@ -11,40 +11,33 @@
       font-family: sans-serif;
       padding: 40px;
     }
-    .bar {
-      display: flex;
-      align-items: center;
-      margin-bottom: 8px;
-      height: 30px;
-      transition: all 0.5s ease;
-    }
-    .label {
-      width: 100px;
-      margin-right: 10px;
-    }
-    .value {
-      margin-left: 10px;
-      font-size: 14px;
-    }
-    .bar-fill {
-      height: 100%;
-      border-radius: 4px;
-      transition: width 0.5s ease;
-    }
-    .green {
-      background-color: #00ff88;
-    }
-    .red {
-      background-color: #ff3366;
+
+    h2 {
+      margin-bottom: 20px;
+      color: white;
     }
   </style>
 </head>
 <body>
   <h2>🔥 15분간 변동성 기준 TOP 30 코인</h2>
-  <div id="chart"></div>
+  <svg id="chart" width="1000" height="1200"></svg>
 
   <script>
     const API_URL = "https://binance-flask-app-production.up.railway.app/top_volatility";
+    const svg = d3.select("#chart");
+    const margin = { top: 20, right: 80, bottom: 20, left: 120 };
+    const width = +svg.attr("width");
+    const height = +svg.attr("height");
+    const innerWidth = width - margin.left - margin.right;
+    const barHeight = 30;
+    const barPadding = 10;
+
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+    let previousData = new Map();
+
+    function getColor(color) {
+      return color === "green" ? "#00ff88" : "#ff3366";
+    }
 
     async function fetchData() {
       const res = await fetch(API_URL);
@@ -53,32 +46,80 @@
 
     async function updateChart() {
       const data = await fetchData();
-      const container = d3.select("#chart");
-      container.selectAll("*").remove();
-
       const maxVol = d3.max(data, d => d.volatility);
 
-      const bars = container.selectAll(".bar")
-        .data(data, d => d.symbol)
-        .enter()
-        .append("div")
-        .attr("class", "bar");
+      const xScale = d3.scaleLinear()
+        .domain([0, maxVol])
+        .range([0, innerWidth]);
 
-      bars.append("div")
+      const yScale = (d, i) => i * (barHeight + barPadding);
+
+      const bars = g.selectAll(".bar").data(data, d => d.symbol);
+
+      // EXIT
+      bars.exit().remove();
+
+      // ENTER
+      const barsEnter = bars.enter().append("g")
+        .attr("class", "bar")
+        .attr("transform", (d, i) => `translate(0, ${yScale(d, i)})`);
+
+      barsEnter.append("text")
         .attr("class", "label")
+        .attr("x", -10)
+        .attr("y", barHeight / 2)
+        .attr("dy", ".35em")
+        .attr("text-anchor", "end")
         .text(d => d.symbol);
 
-      bars.append("div")
-        .attr("class", d => `bar-fill ${d.color}`)
-        .style("width", d => `${(d.volatility / maxVol) * 60}%`);
+      barsEnter.append("rect")
+        .attr("class", "bar-rect")
+        .attr("y", 0)
+        .attr("height", barHeight)
+        .attr("fill", d => getColor(d.color))
+        .attr("width", 0);
 
-      bars.append("div")
+      barsEnter.append("text")
         .attr("class", "value")
+        .attr("x", 5)
+        .attr("y", barHeight / 2)
+        .attr("dy", ".35em")
+        .attr("text-anchor", "start")
+        .style("fill", "white")
         .text(d => `${d.volatility.toFixed(2)}%`);
+
+      // UPDATE
+      const barsMerge = barsEnter.merge(bars);
+
+      barsMerge.transition()
+        .duration(1000)
+        .attr("transform", (d, i) => `translate(0, ${yScale(d, i)})`);
+
+      barsMerge.select("rect")
+        .transition()
+        .duration(1000)
+        .attr("width", d => Math.max(0, xScale(d.volatility)))
+        .attr("fill", d => getColor(d.color));
+
+      barsMerge.select(".value")
+        .transition()
+        .duration(1000)
+        .attr("x", d => xScale(d.volatility) + 8)
+        .tween("text", function (d) {
+          const prev = previousData.get(d.symbol)?.volatility || 0;
+          const i = d3.interpolateNumber(prev, d.volatility);
+          return function (t) {
+            this.textContent = `${i(t).toFixed(2)}%`;
+          };
+        });
+
+      // 저장
+      previousData = new Map(data.map(d => [d.symbol, d]));
     }
 
     updateChart();
-    setInterval(updateChart, 60_000);  // 1분마다 자동 갱신
+    setInterval(updateChart, 60 * 1000);
   </script>
 </body>
 </html>
+
