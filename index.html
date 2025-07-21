@@ -27,35 +27,6 @@
     const barMaxWidth = 600;
     const svg = d3.select("#chart");
 
-    const group = svg.selectAll("g")
-      .data(d3.range(30))
-      .enter()
-      .append("g")
-      .attr("transform", (d, i) => `translate(200, ${i * (barHeight + barGap)})`); // ✅ FIXED
-
-    group.append("text")
-      .attr("class", "label")
-      .attr("x", -10)
-      .attr("y", barHeight / 2)
-      .attr("dy", ".35em")
-      .attr("text-anchor", "end")
-      .attr("fill", "white")
-      .style("font-weight", "bold");
-
-    group.append("rect")
-      .attr("class", "bar")
-      .attr("x", 0)
-      .attr("y", 0)
-      .attr("height", barHeight)
-      .attr("fill", "#00ff88");
-
-    group.append("text")
-      .attr("class", "value")
-      .attr("x", 10)
-      .attr("y", barHeight / 2)
-      .attr("dy", ".35em")
-      .attr("fill", "white");
-
     let previousDataMap = new Map();
 
     async function fetchData() {
@@ -72,43 +43,71 @@
       const maxVol = d3.max(data, d => d.volatility);
       const dataMap = new Map(data.map(d => [d.symbol, d]));
 
-      previousDataMap.clear();
-      data.forEach(d => previousDataMap.set(d.symbol, d));
+      const group = svg.selectAll("g")
+        .data(data, d => d.symbol);
 
-      // ✅ 슬라이딩 애니메이션 복구
-      group.data(data, d => d.symbol)
-        .transition().duration(1000)
+      const groupEnter = group.enter()
+        .append("g")
         .attr("transform", (d, i) => `translate(200, ${i * (barHeight + barGap)})`);
 
-      group.each(function(_, i) {
+      groupEnter.append("text")
+        .attr("class", "label")
+        .attr("x", -10)
+        .attr("y", barHeight / 2)
+        .attr("dy", ".35em")
+        .attr("text-anchor", "end")
+        .attr("fill", "white")
+        .style("font-weight", "bold");
+
+      groupEnter.append("rect")
+        .attr("class", "bar")
+        .attr("x", 0)
+        .attr("y", 0)
+        .attr("height", barHeight)
+        .attr("fill", "#00ff88");
+
+      groupEnter.append("text")
+        .attr("class", "value")
+        .attr("x", 10)
+        .attr("y", barHeight / 2)
+        .attr("dy", ".35em")
+        .attr("fill", "white");
+
+      const merged = groupEnter.merge(group);
+
+      merged.transition().duration(1000)
+        .attr("transform", (d, i) => `translate(200, ${i * (barHeight + barGap)})`);
+
+      merged.each(function(d, i) {
         const g = d3.select(this);
-        const dData = data[i];
-
-        if (!dData) return;
-
-        const safeVol = Math.max(0, dData.volatility);
+        const safeVol = Math.max(0, d.volatility);
         const safeWidth = Math.max(0, (safeVol / maxVol) * barMaxWidth);
 
         g.select("rect")
           .transition().duration(1000)
           .attr("width", safeWidth)
-          .attr("fill", getColorHex(dData.color));
+          .attr("fill", getColorHex(d.color));
 
         g.select("text.label")
-          .text(dData.symbol);
+          .text(d.symbol);
 
         g.select("text.value")
           .transition().duration(1000)
           .tween("text", function() {
-            const prev = previousDataMap.get(dData.symbol);
+            const prev = previousDataMap.get(d.symbol);
             const start = prev ? prev.volatility : 0;
-            const i = d3.interpolateNumber(start, dData.volatility);
+            const i = d3.interpolateNumber(start, d.volatility);
             return function(t) {
               this.textContent = `${i(t).toFixed(2)}%`;
             };
           })
           .attr("x", safeWidth + 10);
       });
+
+      group.exit().remove();
+
+      previousDataMap.clear();
+      data.forEach(d => previousDataMap.set(d.symbol, d));
     }
 
     updateChart();
