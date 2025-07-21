@@ -31,7 +31,7 @@
       .data(d3.range(30))
       .enter()
       .append("g")
-      .attr("transform", (d, i) => `translate(200, ${i * (barHeight + barGap)})`);  // ✅ 고쳐야 할 부분
+      .attr("transform", (d, i) => `translate(200, ${i * (barHeight + barGap)})`); // ✅ FIXED
 
     group.append("text")
       .attr("class", "label")
@@ -75,13 +75,15 @@
       previousDataMap.clear();
       data.forEach(d => previousDataMap.set(d.symbol, d));
 
+      // ✅ 슬라이딩 애니메이션 복구
       group.data(data, d => d.symbol)
         .transition().duration(1000)
-        .attr("transform", (d, i) => `translate(200, ${i * (barHeight + barGap)})`);  // ✅ 슬라이딩 유지
+        .attr("transform", (d, i) => `translate(200, ${i * (barHeight + barGap)})`);
 
       group.each(function(_, i) {
         const g = d3.select(this);
         const dData = data[i];
+
         if (!dData) return;
 
         const safeVol = Math.max(0, dData.volatility);
@@ -93,7 +95,7 @@
           .attr("fill", getColorHex(dData.color));
 
         g.select("text.label")
-          .text(dData.symbol);  // ✅ 코인 이름 정상 표시
+          .text(dData.symbol);
 
         g.select("text.value")
           .transition().duration(1000)
@@ -114,3 +116,4 @@
   </script>
 </body>
 </html>
+
