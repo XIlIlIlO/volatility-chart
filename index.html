@@ -11,10 +11,8 @@
       font-family: sans-serif;
       padding: 40px;
     }
-
     h2 {
       margin-bottom: 20px;
-      color: white;
     }
   </style>
 </head>
@@ -24,97 +22,96 @@
 
   <script>
     const API_URL = "https://binance-flask-app-production.up.railway.app/top_volatility";
-    const svg = d3.select("#chart");
-    const margin = { top: 20, right: 80, bottom: 20, left: 120 };
-    const width = +svg.attr("width");
-    const height = +svg.attr("height");
-    const innerWidth = width - margin.left - margin.right;
     const barHeight = 30;
-    const barPadding = 10;
+    const barGap = 10;
+    const barMaxWidth = 600;
+    const svg = d3.select("#chart");
 
-    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
-    let previousData = new Map();
+    // 그룹 초기화 (placeholder 30개)
+    const group = svg.selectAll("g")
+      .data(d3.range(30))
+      .enter()
+      .append("g")
+      .attr("transform", (d, i) => `translate(200, ${i * (barHeight + barGap)})`);
 
-    function getColor(color) {
-      return color === "green" ? "#00ff88" : "#ff3366";
-    }
+    // 코인 이름
+    group.append("text")
+      .attr("class", "label")
+      .attr("x", -10)
+      .attr("y", barHeight / 2)
+      .attr("dy", ".35em")
+      .attr("text-anchor", "end")
+      .attr("fill", "white")
+      .style("font-weight", "bold");
+
+    // 막대
+    group.append("rect")
+      .attr("class", "bar")
+      .attr("x", 0)
+      .attr("y", 0)
+      .attr("height", barHeight)
+      .attr("fill", "#00ff88");
+
+    // 수치
+    group.append("text")
+      .attr("class", "value")
+      .attr("x", 10)
+      .attr("y", barHeight / 2)
+      .attr("dy", ".35em")
+      .attr("fill", "white");
+
+    let previousDataMap = new Map();
 
     async function fetchData() {
       const res = await fetch(API_URL);
       return await res.json();
     }
 
+    function getColorHex(colorName) {
+      return colorName === "green" ? "#00ff88" : "#ff3366";
+    }
+
     async function updateChart() {
       const data = await fetchData();
       const maxVol = d3.max(data, d => d.volatility);
+      const dataMap = new Map(data.map(d => [d.symbol, d]));
 
-      const xScale = d3.scaleLinear()
-        .domain([0, maxVol])
-        .range([0, innerWidth]);
+      previousDataMap.clear();
+      data.forEach(d => previousDataMap.set(d.symbol, d));
 
-      const yScale = (d, i) => i * (barHeight + barPadding);
+      // 애니메이션 위치 업데이트
+      group.data(data, d => d.symbol)
+        .transition().duration(1000)
+        .attr("transform", (d, i) => `translate(200, ${i * (barHeight + barGap)})`);
 
-      const bars = g.selectAll(".bar").data(data, d => d.symbol);
+      group.each(function(_, i) {
+        const g = d3.select(this);
+        const dData = data[i];
+        if (!dData) return;
 
-      // EXIT
-      bars.exit().remove();
+        const safeVol = Math.max(0, dData.volatility);
+        const safeWidth = Math.max(0, (safeVol / maxVol) * barMaxWidth);
 
-      // ENTER
-      const barsEnter = bars.enter().append("g")
-        .attr("class", "bar")
-        .attr("transform", (d, i) => `translate(0, ${yScale(d, i)})`);
+        g.select("rect")
+          .transition().duration(1000)
+          .attr("width", safeWidth)
+          .attr("fill", getColorHex(dData.color));
 
-      barsEnter.append("text")
-        .attr("class", "label")
-        .attr("x", -10)
-        .attr("y", barHeight / 2)
-        .attr("dy", ".35em")
-        .attr("text-anchor", "end")
-        .text(d => d.symbol);
+        g.select("text.label")
+          .text(dData.symbol);  // ✅ 코인 이름 표시
 
-      barsEnter.append("rect")
-        .attr("class", "bar-rect")
-        .attr("y", 0)
-        .attr("height", barHeight)
-        .attr("fill", d => getColor(d.color))
-        .attr("width", 0);
-
-      barsEnter.append("text")
-        .attr("class", "value")
-        .attr("x", 5)
-        .attr("y", barHeight / 2)
-        .attr("dy", ".35em")
-        .attr("text-anchor", "start")
-        .style("fill", "white")
-        .text(d => `${d.volatility.toFixed(2)}%`);
-
-      // UPDATE
-      const barsMerge = barsEnter.merge(bars);
-
-      barsMerge.transition()
-        .duration(1000)
-        .attr("transform", (d, i) => `translate(0, ${yScale(d, i)})`);
-
-      barsMerge.select("rect")
-        .transition()
-        .duration(1000)
-        .attr("width", d => Math.max(0, xScale(d.volatility)))
-        .attr("fill", d => getColor(d.color));
-
-      barsMerge.select(".value")
-        .transition()
-        .duration(1000)
-        .attr("x", d => xScale(d.volatility) + 8)
-        .tween("text", function (d) {
-          const prev = previousData.get(d.symbol)?.volatility || 0;
-          const i = d3.interpolateNumber(prev, d.volatility);
-          return function (t) {
-            this.textContent = `${i(t).toFixed(2)}%`;
-          };
-        });
-
-      // 저장
-      previousData = new Map(data.map(d => [d.symbol, d]));
+        g.select("text.value")
+          .transition().duration(1000)
+          .tween("text", function() {
+            const prev = previousDataMap.get(dData.symbol);
+            const start = prev ? prev.volatility : 0;
+            const i = d3.interpolateNumber(start, dData.volatility);
+            return function(t) {
+              this.textContent = `${i(t).toFixed(2)}%`;
+            };
+          })
+          .attr("x", safeWidth + 10);
+      });
     }
 
     updateChart();
