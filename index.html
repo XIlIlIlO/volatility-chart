@@ -57,7 +57,8 @@
         .attr("dy", ".35em")
         .attr("text-anchor", "end")
         .attr("fill", "white")
-        .style("font-weight", "bold");
+        .style("font-weight", "bold")
+        .style("opacity", 0);  // 초기 투명
 
       groupEnter.append("rect")
         .attr("class", "bar")
@@ -71,7 +72,8 @@
         .attr("x", 10)
         .attr("y", barHeight / 2)
         .attr("dy", ".35em")
-        .attr("fill", "white");
+        .attr("fill", "white")
+        .style("opacity", 0);  // 초기 투명
 
       const merged = groupEnter.merge(group);
 
@@ -89,10 +91,13 @@
           .attr("fill", getColorHex(d.color));
 
         g.select("text.label")
-          .text(d.symbol);
+          .text(d.symbol)
+          .transition().duration(1000)
+          .style("opacity", 1);  // 천천히 나타남
 
         g.select("text.value")
           .transition().duration(1000)
+          .style("opacity", 1)  // 천천히 나타남
           .tween("text", function() {
             const prev = previousDataMap.get(d.symbol);
             const start = prev ? prev.volatility : 0;
@@ -115,4 +120,5 @@
   </script>
 </body>
 </html>
+
 
