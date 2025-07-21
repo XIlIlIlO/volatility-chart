@@ -79,36 +79,11 @@
 
       const groupEnter = group.enter()
         .append("g")
-        .attr("transform", (d, i) => `translate(200, ${i * (barHeight + barGap)})`);
-
-      groupEnter.append("text")
-        .attr("class", "label")
-        .attr("x", -10)
-        .attr("y", barHeight / 2)
-        .attr("dy", ".35em")
-        .attr("text-anchor", "end")
-        .attr("fill", "white")
-        .style("font-weight", "bold")
-        .style("opacity", 0);
-
-      groupEnter.append("rect")
-        .attr("class", "bar")
-        .attr("x", 0)
-        .attr("y", 0)
-        .attr("height", barHeight)
-        .attr("fill", "#00ff88");
-
-      groupEnter.append("text")
-        .attr("class", "value")
-        .attr("x", 10)
-        .attr("y", barHeight / 2)
-        .attr("dy", ".35em")
-        .attr("fill", "white")
-        .style("opacity", 0);
+        .attr("transform", (d, i) => `translate(50, ${i * (barHeight + barGap)})`);
 
       groupEnter.append("text")
         .attr("class", "rank-change")
-        .attr("x", barMaxWidth + 80)
+        .attr("x", 0)
         .attr("y", barHeight / 2)
         .attr("dy", ".35em")
         .attr("text-anchor", "start")
@@ -116,10 +91,35 @@
         .style("opacity", 0)
         .attr("fill", "white");
 
+      groupEnter.append("text")
+        .attr("class", "label")
+        .attr("x", 30)
+        .attr("y", barHeight / 2)
+        .attr("dy", ".35em")
+        .attr("text-anchor", "start")
+        .attr("fill", "white")
+        .style("font-weight", "bold")
+        .style("opacity", 0);
+
+      groupEnter.append("rect")
+        .attr("class", "bar")
+        .attr("x", 150)
+        .attr("y", 0)
+        .attr("height", barHeight)
+        .attr("fill", "#00ff88");
+
+      groupEnter.append("text")
+        .attr("class", "value")
+        .attr("x", 160)
+        .attr("y", barHeight / 2)
+        .attr("dy", ".35em")
+        .attr("fill", "white")
+        .style("opacity", 0);
+
       const merged = groupEnter.merge(group);
 
       merged.transition().duration(1000)
-        .attr("transform", (d, i) => `translate(200, ${i * (barHeight + barGap)})`);
+        .attr("transform", (d, i) => `translate(50, ${i * (barHeight + barGap)})`);
 
       merged.each(function(d, i) {
         const g = d3.select(this);
@@ -147,32 +147,25 @@
               this.textContent = `${i(t).toFixed(2)}%`;
             };
           })
-          .attr("x", safeWidth + 10);
+          .attr("x", safeWidth + 160);
 
-        // 순위 변화 표시
         const prev = previousDataMap.get(d.symbol);
         const rankText = g.select("text.rank-change");
 
         if (!prev) {
-          rankText
-            .text("NEW")
-            .attr("fill", "white");
+          rankText.text("NEW").attr("fill", "white");
         } else {
           const diff = prev.rank - i;
           if (diff === 0) {
-            rankText.text("");
+            rankText.text("=").attr("fill", "#cccccc");
           } else {
             const arrow = diff > 0 ? "▲" : "▼";
             const color = diff > 0 ? "#00ff88" : "#ff3366";
-            rankText
-              .text(`${arrow}${Math.abs(diff)}`)
-              .attr("fill", color);
+            rankText.text(`${arrow}${Math.abs(diff)}`).attr("fill", color);
           }
         }
 
-        rankText
-          .transition().duration(1000)
-          .style("opacity", 1);
+        rankText.transition().duration(1000).style("opacity", 1);
       });
 
       group.exit().remove();
