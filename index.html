@@ -5,21 +5,29 @@
   <title>Crypto Volatility Race</title>
   <script src="https://d3js.org/d3.v7.min.js"></script>
   <style>
-    body {
+    html, body {
+      margin: 0;
+      padding: 0;
       background-color: black;
       color: white;
       font-family: sans-serif;
-      margin: 0;
-      transform: scale(0.75);             /* ✅ 축소 */
+      overflow: hidden;            /* ✅ 스크롤 완전 제거 */
+      width: 100vw;                /* ✅ 뷰포트 기준 고정 */
+      height: 100vh;
+    }
+
+    body {
+      transform: scale(0.75);      /* ✅ 콘텐츠 축소 */
       transform-origin: top left;
-      width: 133.33%;                      /* ✅ 스케일 보정 (100 / 0.75) */
-      height: auto;
-      overflow: hidden;
+      width: 133.33%;              /* ✅ 보정값: 100 / 0.75 */
+      height: 133.33%;
       padding: 40px;
     }
+
     h2 {
       margin-bottom: 10px;
     }
+
     #time {
       margin-bottom: 20px;
       font-size: 16px;
@@ -61,7 +69,7 @@
     }
 
     async function updateChart() {
-      updateTimeLabel();  // ✅ 시간 갱신
+      updateTimeLabel();
       const data = await fetchData();
       const maxVol = d3.max(data, d => d.volatility);
       const dataMap = new Map(data.map(d => [d.symbol, d]));
@@ -133,7 +141,6 @@
       });
 
       group.exit().remove();
-
       previousDataMap.clear();
       data.forEach(d => previousDataMap.set(d.symbol, d));
     }
@@ -143,6 +150,7 @@
   </script>
 </body>
 </html>
+
 
 
 
