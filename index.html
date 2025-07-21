@@ -167,7 +167,8 @@
               this.textContent = `${i(t).toFixed(2)}%`;
             };
           })
-          .attr("x", safeWidth + 160);
+          .attr("x", 200 + safeWidth - 10)  // 막대 안 오른쪽 끝에서 약간 왼쪽
+          .attr("text-anchor", "end")       // 오른쪽 끝 정렬
 
         const prev = previousDataMap.get(d.symbol);
         const rankText = g.select("text.rank-change");
