@@ -89,7 +89,7 @@
 
     async function updateChart() {
       updateTimeLabel();
-      secondsToNextUpdate = 60; // 카운트다운 리셋
+      secondsToNextUpdate = 60;
 
       const data = await fetchData();
       const maxVol = d3.max(data, d => d.volatility);
@@ -102,6 +102,18 @@
         .append("g")
         .attr("transform", (d, i) => `translate(50, ${i * (barHeight + barGap)})`);
 
+      // Hover 배경용 label-bg 추가
+      groupEnter.append("rect")
+        .attr("class", "label-bg")
+        .attr("x", 45)
+        .attr("y", -5)
+        .attr("width", 100)
+        .attr("height", barHeight)
+        .attr("rx", 4)
+        .attr("ry", 4)
+        .attr("fill", "transparent");
+
+      // 순위 변화 텍스트
       groupEnter.append("text")
         .attr("class", "rank-change")
         .attr("x", 0)
@@ -112,6 +124,7 @@
         .style("opacity", 0)
         .attr("fill", "white");
 
+      // 심볼 텍스트 (클릭 및 호버 가능)
       groupEnter.append("text")
         .attr("class", "label")
         .attr("x", 50)
@@ -120,8 +133,24 @@
         .attr("text-anchor", "start")
         .attr("fill", "white")
         .style("font-weight", "bold")
-        .style("opacity", 0);
+        .style("cursor", "pointer")
+        .style("opacity", 0)
+        .on("mouseover", function () {
+          d3.select(this.previousSibling)
+            .transition().duration(200)
+            .attr("fill", "#333");
+        })
+        .on("mouseout", function () {
+          d3.select(this.previousSibling)
+            .transition().duration(200)
+            .attr("fill", "transparent");
+        })
+        .on("click", function (event, d) {
+          const url = `https://www.binance.com/en/futures/${d.symbol}`;
+          window.open(url, "_blank");
+        });
 
+      // 변동성 바
       groupEnter.append("rect")
         .attr("class", "bar")
         .attr("x", 200)
@@ -129,6 +158,7 @@
         .attr("height", barHeight)
         .attr("fill", "#00ff88");
 
+      // 수치 텍스트
       groupEnter.append("text")
         .attr("class", "value")
         .attr("x", 210)
@@ -147,7 +177,7 @@
         const safeVol = Math.max(0, d.volatility);
         const safeWidth = Math.max(0, (safeVol / maxVol) * barMaxWidth);
 
-        g.select("rect")
+        g.select("rect.bar")
           .transition().duration(1000)
           .attr("width", safeWidth)
           .attr("fill", getColorHex(d.color));
@@ -156,6 +186,10 @@
           .text(" " + d.symbol)
           .transition().duration(1000)
           .style("opacity", 1);
+
+        g.select("rect.label-bg")
+          .transition().duration(1000)
+          .attr("width", d.symbol.length * 8 + 20);  // 텍스트 길이에 따라 배경 조절
 
         g.select("text.value")
           .transition().duration(1000)
@@ -168,8 +202,8 @@
               this.textContent = `${i(t).toFixed(2)}%`;
             };
           })
-            .attr("x", 200 + safeWidth + 10)  // ✅ 바깥으로 고정 위치
-            .attr("text-anchor", "start");    // ✅ 왼쪽 기준 정렬
+          .attr("x", 200 + safeWidth + 10)
+          .attr("text-anchor", "start");
 
         const prev = previousDataMap.get(d.symbol);
         const rankText = g.select("text.rank-change");
@@ -200,7 +234,7 @@
 
     updateChart();
     setInterval(updateChart, 60 * 1000);
-    startCountdown(); // 타이머 시작
+    startCountdown();
   </script>
 </body>
 </html>
