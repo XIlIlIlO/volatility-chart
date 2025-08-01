@@ -102,17 +102,6 @@
         .append("g")
         .attr("transform", (d, i) => `translate(50, ${i * (barHeight + barGap)})`);
 
-      // Hover 배경용 label-bg 추가
-      groupEnter.append("rect")
-        .attr("class", "label-bg")
-        .attr("x", 45)
-        .attr("y", -5)
-        .attr("width", 100)
-        .attr("height", barHeight)
-        .attr("rx", 4)
-        .attr("ry", 4)
-        .attr("fill", "transparent");
-
       // 순위 변화 텍스트
       groupEnter.append("text")
         .attr("class", "rank-change")
